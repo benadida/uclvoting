@@ -2,12 +2,26 @@ from django.http import HttpResponse
 from django.template import Context, loader
 from django.contrib.auth.decorators import login_required
 
+# A client to the Helios site
+import heliosclient
+import utils
+
+HELIOS_CLIENT = heliosclient.HeliosClient({'consumer_key': 'ucl', 'consumer_secret': 'ucl',
+                        'access_token': 'ucl', 'access_token_secret' : 'ucl'},
+                        host = 'dev.heliosvoting.org',
+                        port = 80)
+                        
+ELECTION_ID = 'ahBkZXYtaGVsaW9zdm90aW5ncg8LEghFbGVjdGlvbhiRAww'
+
 def render_template(template_name, vars = {}):
   t = loader.get_template('ucl/%s.%s' % (template_name, "html"))
   c= Context(vars)
   return HttpResponse(t.render(c))
 
-# Create your views here.
+#
+# VIEWS
+#
+
 def index(request):
   return render_template('index')
   
@@ -15,11 +29,20 @@ def vote(request):
   return render_template('vote')
   
 def election(request):
-  return HttpResponse("""{"election_id": "agxoZWxpb3N2b3RpbmdyDwsSCEVsZWN0aW9uGJooDA", "name": "cyrus-test", "pk": {"g": "68111451286792593845145063691659993410221812806874234365854504719057401858372594942893291581957322023471947260828209362467690671421429979048643907159864269436501403220400197614308904460547529574693875218662505553938682573554719632491024304637643868603338114042760529545510633271426088675581644231528918421974", "p": "169989719781940995935039590956086833929670733351333885026079217526937746166790934510618940073906514429409914370072173967782198129423558224854191320917329420870526887804017711055077916007496804049206725568956610515399196848621653907978580213217522397058071043503404700268425750722626265208099856407306527012763", "q": "84994859890970497967519795478043416964835366675666942513039608763468873083395467255309470036953257214704957185036086983891099064711779112427095660458664710435263443902008855527538958003748402024603362784478305257699598424310826953989290106608761198529035521751702350134212875361313132604049928203653263506381", "y": "34455719795622721427845825376309871844424624267300510988786485955426446426813153582073620315913097743158966563647433132348835083192512848033458337922377837178543116083217259832008967986631160462640606209898410043281858616745148588161566948502325727470232317552207627124555093059034672206316000515896606826641"}, "questions": [{"answer_urls": ["", "", ""], "answers": ["mars", "snickers", "100 grand"], "max": 1, "question": "What's your favorite candy bar?", "short_name": "candy bar"}], "voters_hash": "aa\/8KqjfXLAlGrG3GRrx8m0\/kVM", "voting_ends_at": null, "voting_starts_at": null}""")
+  return HttpResponse(utils.to_json(HELIOS_CLIENT.election_get(ELECTION_ID).toJSONDict()))
   
 def voter(request):
   pass
   
 def submit_vote(request):
+  # submit the vote to the Helios Server
+  email = request.POST['email']
+  encrypted_vote = request.POST['encrypted_vote']
+  
+  openid = None
+  name = "Test User - " + email
+  category = None
+  
   # submit the vote the Helios server
+  HELIOS_CLIENT.open_submit(ELECTION_ID, encrypted_vote, email, openid, name, category)
   return HttpResponse("success");
