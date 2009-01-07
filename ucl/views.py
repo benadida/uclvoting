@@ -7,10 +7,10 @@ import heliosclient
 import utils
 
 HELIOS_CLIENT = heliosclient.HeliosClient({'consumer_key': 'ucl', 'consumer_secret': 'ucl'},
-                        host = 'localhost',
-                        port = 8000)
+                        host = '174.129.241.146',
+                        port = 80, prefix ='/helios')
                         
-ELECTION_ID = '6'
+ELECTION_ID = '7'
 
 def render_template(template_name, vars = {}):
   t = loader.get_template('ucl/%s.%s' % (template_name, "html"))

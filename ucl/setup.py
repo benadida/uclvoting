@@ -22,7 +22,7 @@ print "election id is: " + election_id
 HELIOS_CLIENT.election_set_reg(election_id, open_reg= True)
 
 # set questions
-questions = [{"answers": ["ice-cream", "cake"], "max": 1, "question": "ice-cream or cake?", "short_name": "dessert"}]
+questions = [{"answers": [u"ice-cream / glace", u"cake / g\u00e2teau"], "max": 1, "question": u"Do you prefer ice-cream or cake? / Pr\u00e9ferez-vous la glace ou le g\u00e2teau?", "short_name": "dessert"}]
 HELIOS_CLIENT.election_questions_save(election_id, questions)
 
 # freeze it
