@@ -9,33 +9,37 @@ import oauthclient, oauth, utils
 import algs, electionalgs
 
 class HeliosClient(object):
-  def __init__(self, auth_info, host, port):
+  def __init__(self, auth_info, host, port, prefix=""):
     """
     auth_info is consumer_key, ....
     """
     self.consumer = oauth.OAuthConsumer(auth_info['consumer_key'],auth_info['consumer_secret'])
-    self.token = oauth.OAuthToken(auth_info['access_token'],auth_info['access_token_secret'])
+    self.token = oauth.OAuthToken(auth_info['consumer_key'],auth_info['consumer_secret'])
     self.client = oauthclient.MachineOAuthClient(self.consumer, self.token, host, port)
+    self.prefix = prefix
     
   def get(self, url, parameters = None):
-    return self.client.access_resource("GET", url, parameters= parameters)
+    print "getting " + self.prefix + url
+    return self.client.access_resource("GET", self.prefix + url, parameters= parameters)
   
   def post(self, url, parameters = None):
-    return self.client.access_resource("POST", url, parameters= parameters)
+    print "posting " + self.prefix + url
+    result = self.client.access_resource("POST", self.prefix + url, parameters= parameters)
+    return result
 
+  def get_test(self):
+    return self.get("/helios_test")
+    
   def params(self):
     params_json = self.get("/elections/params")
     return algs.ElGamal.fromJSONDict(utils.from_json(params_json))
     
-  def election_new(self, name, public_key):
-    election_id = self.post("/elections/new_3", {"name" : name, "public_key" : utils.to_json(public_key.toJSONDict())})
+  def election_new(self, name, public_key, ballot_type = 'homomorphic', tally_type = 'homomorphic'):
+    election_id = self.post("/elections/new_3", {"name" : name, "public_key" : utils.to_json(public_key.toJSONDict()), "ballot_type": ballot_type, "tally_type": tally_type})
     return election_id
     
-  def election_get_raw(self, election_id):
-    return self.get("/elections/%s" % election_id)
-    
   def election_get(self, election_id):
-    return electionalgs.Election.fromJSONDict(utils.from_json(self.election_get_raw(election_id)))
+    return electionalgs.Election.fromJSONDict(utils.from_json(self.get("/elections/%s/" % election_id)))
     
   def election_set_reg(self, election_id, open_reg=False):
     result = self.post("/elections/%s/set_reg" % election_id, {'open_p' : str(int(open_reg))})
@@ -46,7 +50,7 @@ class HeliosClient(object):
     return result == "SUCCESS"
     
   def election_freeze(self, election_id):
-    result = self.post("/elections/%s/freeze_2" % election_id, {})
+    result = self.post("/elections/%s/freeze" % election_id, {})
     return result == "SUCCESS"
     
   def open_submit(self, election_id, encrypted_vote, email=None, openid_url=None, name=None, category=None):
@@ -69,3 +73,4 @@ class HeliosClient(object):
     
     result = self.post("/elections/%s/set_tally" % election_id, {'tally' : tally_obj_json})
     return result == "SUCCESS"
+    

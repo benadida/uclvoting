@@ -2,10 +2,9 @@
 # A client to the Helios site
 import heliosclient
 
-HELIOS_CLIENT = heliosclient.HeliosClient({'consumer_key': 'ucl', 'consumer_secret': 'ucl',
-                        'access_token': 'ucl', 'access_token_secret' : 'ucl'},
-                        host = 'dev.heliosvoting.org',
-                        port = 80)
+HELIOS_CLIENT = heliosclient.HeliosClient({'consumer_key': 'ucl', 'consumer_secret': 'ucl'},
+                        host = 'localhost',
+                        port = 8000)
 
 
 # get the El Gamal Parameters

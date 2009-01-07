@@ -13,7 +13,6 @@
 BigInt = Class.extend({
   init: function(value, radix) {
     if (value == null) {
-      debugger;
       throw "null value!";
     }
       
@@ -120,8 +119,8 @@ BigInt.setup = function(callback) {
   if(BigInt.use_applet) {
       BigInt.APPLET = document.applets["bigint"];
       if (BigInt.APPLET == null) {
-        // setTimeout("BigInt.setup();", 2000);
-        // return;
+        //setTimeout("BigInt.setup();", 2000);
+        //return;
       }
   }
 
@@ -129,15 +128,16 @@ BigInt.setup = function(callback) {
   BigInt.ONE = new BigInt("1",10);
   BigInt.TWO = new BigInt("2",10);
   BigInt.FORTY_TWO = new BigInt("42",10);
-
-  callback();
+  
+  if (callback) {
+    callback();
+  }
 };
 
 // .onload instead of .ready, as I don't think the applet is ready until onload.
 // FIXME: something wrong here in the first load
-//$(document).ready(function() {
-//    setTimeout("BigInt.setup();", 2000);
-//    alert('done');
-//});
+$(document).ready(function() {
+    BigInt.setup();
+});
 
 

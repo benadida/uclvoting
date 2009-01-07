@@ -1,21 +1,18 @@
 """
 Utilities.
 
-FIXME: this needs a thorough cleanup, currently a dump of any useful func.
-Not all updated for GAE.
-
 Ben Adida - ben@adida.net
 2005-04-11
 """
 
 import urllib, re, sys, datetime, urlparse, string
+import threading
 
-try:
-  from django.utils import simplejson
-except:
-  import simplejson
+from django.utils import simplejson
+
+from django.conf import settings
   
-import random
+import random, logging
 import sha, hmac, base64
 
 def hash(s):
@@ -31,7 +28,8 @@ def hash_b64(s):
   removes the trailing "="
   """
   hasher = sha.new(s)
-  return base64.b64encode(hasher.digest())[:-1]
+  result= base64.b64encode(hasher.digest())[:-1]
+  return result
 
 def do_hmac(k,s):
   """
@@ -55,156 +53,7 @@ def split_by_length(str, length, rejoin_with=None):
     return rejoin_with.join(str_arr)
   else:
     return str_arr
-  
-# takes a dictionary and makes sure all values are lists
-def listify(d):
-    new_d = dict()
     
-    for (k,v) in d.items():
-        # if it's not a list make it a list
-        if not isinstance(v,list):
-            v = [v]
-        
-        new_d[k] = v
-    
-    return new_d
-    
-def parent_vars(level, extra_vars = None):
-    """
-    Goes up the indicated number of levels and returns the equivalent of calling locals()
-    in that scope
-    """
-    try: 1/0
-    except: frame = sys.exc_traceback.tb_frame
-
-    # Go up in the frame stack
-    for i in range(level+1):
-      frame = frame.f_back
-
-    loc, glob = frame.f_locals, frame.f_globals
-    
-
-    if extra_vars != None:
-        loc = loc.copy()
-        for key in extra_vars.keys():
-            loc[key] = extra_vars[key]
-            
-    return loc
-
-
-def load_url(url):
-    """
-    Loads and returns the content of a URL.
-    No streaming for now.
-    """
-
-    #req = urllib2.Request(url = url)
-    #f = urllib2.urlopen(req)
-    #return f.read()
-    return None
-
-def get_select_options(html, select_name):
-    """
-    Takes a chunk of HTML, looks for a select, and outputs a list of options of that select.
-
-    Looks only at value='', not at the pretty display.
-    """
-
-    # a regular expression to match the select block
-    pattern = re.compile('<select *name="%s"[^>]*>(.*?)</select>' % select_name, re.MULTILINE | re.IGNORECASE | re.DOTALL)
-    m = pattern.search(html)
-    if (m == None):
-        # we have no match, try another pattern
-        pattern = re.compile('<select *name=%s[^>]*>(.*?)</select>' % select_name, re.MULTILINE | re.IGNORECASE | re.DOTALL)
-        m = pattern.search(html)
-
-    select_block = m.group()
-
-    # extract the options from the select block
-    pattern = re.compile('<option[^>]*value="(.*?)">(.*?)</option>', re.IGNORECASE)
-    options = pattern.findall(select_block)
-
-    return options
-
-def csv_safe(string):
-    """
-    Make a string safe for a CSV field
-    """
-    # let's backslash all the quotation marks anyways
-    string = str(string)
-    string = string.replace('"','\\"')
-
-    if "," not in string and "\n" not in string:
-        return string
-
-    return '"' + string + '"'
-
-def js_sq_safe(sol, depth=1, escape_newlines = True):
-    """
-    Make a string or a list safe for Javascript
-    """
-    if not sol:
-        return ''
-           
-    if isinstance(sol, list):
-        l = []
-        for el in sol:
-            l.append(_js_sq_safe(el, depth, escape_newlines))
-        return l
-    else:
-        return _js_sq_safe(sol, depth, escape_newlines)
-
-def _js_sq_safe(string, depth, escape_newlines):
-    repl_str = "\\" * depth + "'"
-    string = string.replace("'",repl_str)
-
-    if escape_newlines:
-        string = string.replace('\r\n',"\\n")
-        string = string.replace('\r',"\\n")
-        string = string.replace("\n","\\n")
-        
-    return string
-
-def js_dq_safe(sol, depth=1):
-  """
-  Make a string or a list safe for Javascript
-  """
-  if not sol:
-      return ''
-         
-  if isinstance(sol, list):
-      l = []
-      for el in sol:
-          l.append(_js_dq_safe(el))
-      return l
-  else:
-      return _js_dq_safe(sol, depth)
-
-def _js_dq_safe(string, depth=1):
-    """
-    Make a string safe for Javascript
-    """
-    repl_str = "\\" * depth + '"'
-    string = string.replace('"',repl_str)
-    return string    
-
-def html_dq_safe(string):
-    """
-    Make a string safe for HTML with double quotes
-    """
-    if not string:
-        return string
-    string = string.replace('"','&quot;')
-    return string
-    
-def trunc_string(string, length=50):
-    """
-    Make a string short enough for display
-    """
-    if len(string)>length:
-        return "%s..." % string[:length-3]
-    else:
-        return string
 
 def urlencode(str):
     """
@@ -230,12 +79,6 @@ def urldecode(str):
 
     return urllib.unquote(str)
 
-def get_url():
-  pass
-
-def get_host():
-  pass
-
 def to_json(d):
   return simplejson.dumps(d, sort_keys=True)
   
@@ -253,12 +96,6 @@ def JSONFiletoDict(filename):
   f.close()
   return JSONtoDict(content)
     
-def isBlank(s):
-    if not isinstance(s, str):
-      return True
-    else:
-      return (len(s.strip()) == 0 )
-      
 def dictToURLParams(d):
   if d:
     return '&'.join([i + '=' + urlencode(v) for i,v in d.items()])
@@ -311,34 +148,6 @@ def xss_strip_all_tags(s):
         
     return re.sub("(?s)<[^>]*>|&#?\w+;", fixup, s)
     
-# simple url checking / validation
-
-def url_check(url):
-  """
-  Parses a URL and errors out if its not scheme http or https or has no net location
-  """
-  
-  url_tuple = urlparse.urlparse(url)
-  if url_tuple[0] == 'http' or url_tuple[0] == 'https' and url_tuple[1] != "":
-    return url
-  else:
-    raise Exception('bad url')
-
-def url_truncate(url):
-  """
-  Parses a URL and truncates it after the domain part
-  """
-  
-  url_tuple = urlparse.urlparse(url)
-  return url_tuple[0] + '://' + url_tuple[1]
-  
-def url_get_domain(url):
-    """
-    Parses a URL and truncates it after the domain part
-    """
-
-    url_tuple = urlparse.urlparse(url)
-    return url_tuple[1]
  
 random.seed()
 
@@ -351,6 +160,13 @@ def random_string(length=20):
 
     return r_string
 
+def get_host():
+  return settings.SERVER_HOST
+  
+def get_prefix():
+  return settings.SERVER_PREFIX
+  
+
 ##
 ## Datetime utilities
 ##
@@ -360,3 +176,16 @@ def string_to_datetime(str, fmt="%Y-%m-%d %H:%M"):
     return None
 
   return datetime.datetime.strptime(str, fmt)
+  
+##
+## email
+##
+
+from django.core import mail as django_mail
+
+def send_email(sender, recpt_lst, subject, body):
+  logging.error("sending email - %s" % subject)
+  django_mail.send_mail(subject, body, sender, recpt_lst, fail_silently=True)
+  
+
+  

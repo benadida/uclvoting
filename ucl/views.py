@@ -6,16 +6,18 @@ from django.contrib.auth.decorators import login_required
 import heliosclient
 import utils
 
-HELIOS_CLIENT = heliosclient.HeliosClient({'consumer_key': 'ucl', 'consumer_secret': 'ucl',
-                        'access_token': 'ucl', 'access_token_secret' : 'ucl'},
-                        host = 'dev.heliosvoting.org',
-                        port = 80)
+HELIOS_CLIENT = heliosclient.HeliosClient({'consumer_key': 'ucl', 'consumer_secret': 'ucl'},
+                        host = 'localhost',
+                        port = 8000)
                         
-ELECTION_ID = 'ahBkZXYtaGVsaW9zdm90aW5ncg8LEghFbGVjdGlvbhiRAww'
+ELECTION_ID = '6'
 
 def render_template(template_name, vars = {}):
   t = loader.get_template('ucl/%s.%s' % (template_name, "html"))
-  c= Context(vars)
+
+  vars_with_utils = vars.copy()
+  vars_with_utils['utils'] = utils
+  c = Context(vars_with_utils)
   return HttpResponse(t.render(c))
 
 #

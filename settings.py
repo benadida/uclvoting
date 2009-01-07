@@ -102,3 +102,7 @@ INSTALLED_APPS = (
 #    'django.contrib.sessions',
 #    'django.contrib.sites',
 )
+
+# HELIOS
+SERVER_HOST = "localhost:8001"
+SERVER_PREFIX = ""
